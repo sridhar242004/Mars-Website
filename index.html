@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MarsXplorer: Immersive Mars Sample Return Mission</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Space+Mono&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/ScrollTrigger.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/particlesjs/2.2.3/particles.min.js"></script>
+    <style>
+        :root {
+            --space-100: #F0F0F0;
+            --space-500: #4ECDC4;
+            --space-700: #2A2A4E;
+            --space-800: #1A1A3E;
+            --space-900: #0A0A1E;
+            --red-600: #DC2626;
+            --accent-glow: 0 0 10px #4ECDC4, 0 0 20px #4ECDC4, 0 0 30px #4ECDC4, 0 0 40px #4ECDC4;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Space Mono', monospace;
+            background-color: var(--space-900);
+            color: var(--space-100);
+            line-height: 1.6;
+            overflow-x: hidden;
+            font-size: 16px;
+        }
+        
+        .container {
+            width: 95%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+        
+        #navbar {
+            background-color: rgba(26, 26, 62, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 0;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        #navbar .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .logo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--space-100);
+            text-decoration: none;
+            text-shadow: var(--accent-glow);
+            margin-bottom: 0.5rem;
+        }
+        
+        .nav-links {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        
+        .nav-link {
+            color: var(--space-100);
+            text-decoration: none;
+            transition: color 0.3s ease, text-shadow 0.3s ease;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .nav-link:hover {
+            color: var(--space-500);
+            text-shadow: var(--accent-glow);
+        }
+        
+        section {
+            padding: 4rem 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        h1, h2, h3 {
+            font-family: 'Orbitron', sans-serif;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(to right, #DC2626, #FBBF24);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: textGlow 4s ease-in-out infinite;
+        }
+        
+        @keyframes textGlow {
+            0%, 100% {
+                text-shadow: 0 0 10px rgba(220, 38, 38, 0.7), 0 0 20px rgba(220, 38, 38, 0.5);
+            }
+            50% {
+                text-shadow: 0 0 20px rgba(251, 191, 36, 0.7), 0 0 30px rgba(251, 191, 36, 0.5);
+            }
+        }
+        
+        h2 {
+            font-size: 2rem;
+            color: var(--space-500);
+            text-shadow: var(--accent-glow);
+        }
+        
+        h3 {
+            font-size: 1.5rem;
+        }
+        
+        #landing {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #mars-model {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        #landing .content {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            padding: 1rem;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background-color: var(--red-600);
+            color: var(--space-100);
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+        
+        .cta-button::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 70%);
+            transform: scale(0);
+            transition: transform 0.5s ease-out;
+        }
+        
+        .cta-button:hover::before {
+            transform: scale(1);
+        }
+        
+        #virtual-tour {
+            position: relative;
+            height: 70vh;
+            overflow: hidden;
+        }
+        
+        #virtual-tour-canvas {
+            width: 100%;
+            height: 100%;
+        }
+        
+        #tour-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+        }
+        
+        .tour-button {
+            background-color: var(--space-700);
+            color: var(--space-100);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            font-size: 0.9rem;
+        }
+        
+        .tour-button:hover {
+            background-color: var(--space-500);
+        }
+        
+        #info-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: rgba(26, 26, 62, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            max-width: 250px;
+            font-size: 0.9rem;
+        }
+        
+        #audio-controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+        }
+        
+        .audio-button {
+            background-color: var(--space-700);
+            color: var(--space-100);
+            border: none;
+            padding: 10px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        
+        .audio-button:hover {
+            background-color: var(--space-500);
+        }
+        
+        .dashboard-grid, .budget-grid, .risk-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+        
+        .dashboard-item, .budget-item, .risk-item {
+            background-color: rgba(26, 26, 62, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .dashboard-item:hover, .budget-item:hover, .risk-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        #task-list {
+            list-style-type: none;
+            background-color: rgba(26, 26, 62, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 1rem;
+            border-radius: 0.5rem;
+        }
+        
+        #task-list li {
+            background-color: var(--space-700);
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 0.25rem;
+            cursor: move;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            font-size: 0.9rem;
+        }
+        
+        #task-list li:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 10px rgba(78, 205, 196, 0.5);
+        }
+        
+        #risk-matrix {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0.25rem;
+            aspect-ratio: 1;
+        }
+        
+        .risk-point {
+            background-color: var(--red-600);
+            border-radius: 0.25rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .risk-point:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 10px rgba(220, 38, 38, 0.5);
+        }
+        
+        #mission-timeline {
+            position: relative;
+            height: 300px;
+        }
+        
+        .timeline-event {
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background-color: var(--space-500);
+            cursor: pointer;
+        }
+        
+        .timeline-event:hover {
+            transform: scale(1.2);
+            box-shadow: var(--accent-glow);
+        }
+        
+        #communication-log {
+            height: 250px;
+            overflow-y: auto;
+            padding: 0.75rem;
+            background-color: rgba(26, 26, 62, 0.8);
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .log-entry {
+            margin-bottom: 0.5rem;
+            padding: 0.5rem;
+            background-color: var(--space-700);
+            border-radius: 0.25rem;
+        }
+        
+        #resource-management {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+        }
+        
+        .resource-item {
+            text-align: center;
+            margin: 0.5rem;
+            width: calc(50% - 1rem);
+        }
+        
+        .resource-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--space-500);
+        }
+        
+        .resource-bar {
+            width: 100%;
+            height: 15px;
+            background-color: var(--space-700);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        
+        .resource-fill {
+            height: 100%;
+            background-color: var(--space-500);
+            transition: width 0.3s ease;
+        }
+        
+        #particles-js {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+        
+        .interactive-map {
+            width: 100%;
+            height: 400px;
+            background-color: var(--space-800);
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .map-point {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: var(--red-600);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        
+        .map-point:hover {
+            transform: scale(1.2);
+        }
+        
+        .map-info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background-color: rgba(26, 26, 62, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+        
+        #mission-objectives {
+            background-color: rgba(26, 26, 62, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        
+        .objective {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .objective-status {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .status-complete {
+            background-color: #4CAF50;
+        }
+        
+        .status-in-progress {
+            background-color: #FFC107;
+        }
+        
+        .status-pending {
+            background-color: #9E9E9E;
+        }
+        
+        #crew-info {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            gap: 20px;
+        }
+        
+        .crew-member {
+            background-color: rgba(26, 26, 62, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            width: calc(50% - 10px);
+            text-align: center;
+        }
+        
+        .crew-member img {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 10px;
+        }
+        
+        #weather-report {
+            background-color: rgba(26, 26, 62, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        
+        .weather-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+        }
+        
+        .weather-item {
+            text-align: center;
+            padding: 10px;
+            background-color: var(--space-700);
+            border-radius: 5px;
+        }
+        
+        #mission-control {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        
+        .control-panel {
+            background-color: rgba(26, 26, 62, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .control-button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            background-color: var(--space-500);
+            color: var(--space-900);
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        
+        .control-button:hover {
+            background-color: var(--red-600);
+            color: var(--space-100);
+        }
+        
+        @media (min-width: 768px) {
+            body {
+                font-size: 18px;
+            }
+        
+            #navbar .container {
+                flex-direction: row;
+                justify-content: space-between;
+            }
+        
+            .logo {
+                margin-bottom: 0;
+            }
+        
+            .nav-link {
+                font-size: 1rem;
+            }
+        
+            h1 {
+                font-size: 3rem;
+            }
+        
+            h2 {
+                font-size: 2.5rem;
+            }
+        
+            .dashboard-grid, .budget-grid, .risk-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        
+            #virtual-tour {
+                height: 80vh;
+            }
+        
+            #info-panel {
+                max-width: 300px;
+            }
+        
+            .resource-item {
+                width: calc(25% - 1rem);
+            }
+        }
+        
+        @media (min-width: 1024px) {
+            .dashboard-grid, .budget-grid, .risk-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="particles-js"></div>
+    <nav id="navbar">
+        <div class="container">
+            <a href="#" class="logo">MarsXplorer</a>
+            <div class="nav-links">
+                <a href="#landing" class="nav-link">Home</a>
+                <a href="#virtual-tour" class="nav-link">Virtual Tour</a>
+                <a href="#mission-info" class="nav-link">Mission Info</a>
+                <a href="#resources" class="nav-link">Resources</a>
+                <a href="#dashboard" class="nav-link">Dashboard</a>
+                <a href="#crew" class="nav-link">Crew</a>
+                <a href="#mission-control" class="nav-link">Mission Control</a>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <section id="landing">
+            <canvas id="mars-model"></canvas>
+            <div class="content">
+                <h1>MarsXplorer: Journey to the Red Planet</h1>
+                <p>Embark on an immersive Mars Sample Return Mission experience.</p>
+                <a href="#virtual-tour" class="cta-button">Start Your Mars Adventure</a>
+            </div>
+        </section>
+
+        <section id="virtual-tour">
+            <h2>Virtual Mars Base Tour</h2>
+            <canvas id="virtual-tour-canvas"></canvas>
+            <div id="tour-controls">
+                <button class="tour-button" id="prev-location">Previous Location</button>
+                <button class="tour-button" id="next-location">Next Location</button>
+            </div>
+            <div id="info-panel">
+                <h3 id="location-name">Welcome Center</h3>
+                <p id="location-description">Start your journey at the Mars Base Welcome Center.</p>
+            </div>
+            <div id="audio-controls">
+                <button class="audio-button" id="toggle-audio">🔊</button>
+            </div>
+        </section>
+
+        <section id="mission-info">
+            <h2>Mission Overview</h2>
+            <div id="mission-timeline"></div>
+            <div id="mission-objectives">
+                <h3>Mission Objectives</h3>
+                <div class="objective">
+                    <div class="objective-status status-complete"></div>
+                    <span>Establish Mars Base Camp</span>
+                </div>
+                <div class="objective">
+                    <div class="objective-status status-in-progress"></div>
+                    <span>Collect Geological Samples</span>
+                </div>
+                <div class="objective">
+                    <div class="objective-status status-pending"></div>
+                    <span>Prepare Samples for Earth Return</span>
+                </div>
+            </div>
+        </section>
+
+        <section id="resources">
+            <h2>Mars Resources</h2>
+            <div id="resource-management"></div>
+            <div class="interactive-map">
+                <div class="map-point" style="top: 30%; left: 40%;" data-info="Water Ice Deposit"></div>
+                <div class="map-point" style="top: 60%; left: 70%;" data-info="Potential Landing Site"></div>
+                <div class="map-point" style="top: 20%; left: 80%;" data-info="Geological Interest"></div>
+                <div class="map-info"></div>
+            </div>
+            <div id="weather-report">
+                <h3>Mars Weather Report</h3>
+                <div class="weather-grid">
+                    <div class="weather-item">
+                        <h4>Temperature</h4>
+                        <p>-63°C</p>
+                    </div>
+                    <div class="weather-item">
+                        <h4>Pressure</h4>
+                        <p>7 hPa</p>
+                    </div>
+                    <div class="weather-item">
+                        <h4>Wind Speed</h4>
+                        <p>5 m/s</p>
+                    </div>
+                    <div class="weather-item">
+                        <h4>UV Index</h4>
+                        <p>Low</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="dashboard">
+            <h2>Mission Control Dashboard</h2>
+            <div class="dashboard-grid">
+                <div class="dashboard-item">
+                    <h3>Budget Overview</h3>
+                    <canvas id="budget-chart"></canvas>
+                </div>
+                <div class="dashboard-item">
+                    <h3>Mission Progress</h3>
+                    <div id="mission-progress"></div>
+                </div>
+                <div class="dashboard-item">
+                    <h3>Resource Management</h3>
+                    <div id="resource-management"></div>
+                </div>
+                <div class="dashboard-item">
+                    <h3>Communication Log</h3>
+                    <div id="communication-log"></div>
+                </div>
+                <div class="dashboard-item">
+                    <h3>Task Manager</h3>
+                    <ul id="task-list"></ul>
+                </div>
+                <div class="dashboard-item">
+                    <h3>Risk Assessment</h3>
+                    <div id="risk-matrix"></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="crew">
+            <h2>Meet the Crew</h2>
+            <div id="crew-info">
+                <div class="crew-member">
+                    <img src="happy-smiling-young-man-avatar-3d-portrait-of-a-man-cartoon-character-people-illustration-isolated-on-white-background-vector.jpg" alt="Crew Member 1">
+                    <h3>Dr. SRIDHAR</h3>
+                    <p>Mission Commander</p>
+                </div>
+                <div class="crew-member">
+                    <img src="happy-smiling-young-man-avatar-3d-portrait-of-a-man-cartoon-character-people-illustration-isolated-on-white-background-vector.jpg" alt="Crew Member 2">
+                    <h3>Dr.ARJUN KUMAR</h3>
+                    <p>Chief Scientist</p>
+                </div>
+                <div class="crew-member">
+                    <img src="1000_F_592209262_dQX4S2eCqN4irJR5s9SHkZ83HGLrGxOd.jpg" alt="Crew Member 3">
+                    <h3>Eng. Sarah Johnson</h3>
+                    <p>Systems Engineer</p>
+                </div>
+                <div class="crew-member">
+                    <img src="happy-smiling-young-man-avatar-3d-portrait-of-a-man-cartoon-character-people-illustration-isolated-on-white-background-vector.jpg" alt="Crew Member 4">
+                    <h3>Dr. Michael Chen</h3>
+                    <p>Medical Officer</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="mission-control">
+            <h2>Mission Control Center</h2>
+            <div class="control-panel">
+                <h3>System Status</h3>
+                <p>All systems nominal</p>
+                <button class="control-button">Run Diagnostics</button>
+            </div>
+            <div class="control-panel">
+                <h3>Communication</h3>
+                <p>Next transmission window: 2h 15m</p>
+                <button class="control-button">Send Message</button>
+            </div>
+            <div class="control-panel">
+                <h3>Sample Analysis</h3>
+                <p>3 samples ready for analysis</p>
+                <button class="control-button">Start Analysis</button>
+            </div>
+            <div class="control-panel">
+                <h3>Emergency Protocols</h3>
+                <p>No active emergencies</p>
+                <button class="control-button">Initiate Drill</button>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Mars 3D Model
+        const initMarsModel = () => {
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('mars-model'), alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+
+            const geometry = new THREE.SphereGeometry(5, 64, 64);
+            const textureLoader = new THREE.TextureLoader();
+            const marsTexture = textureLoader.load('https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/OSIRIS_Mars_true_color.jpg/2560px-OSIRIS_Mars_true_color.jpg');
+            const marsBumpMap = textureLoader.load('https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/Mars_topography_%28MOLA_dataset%29_with_poles_marked.jpg/2560px-Mars_topography_%28MOLA_dataset%29_with_poles_marked.jpg');
+            const material = new THREE.MeshPhongMaterial({ 
+                map: marsTexture,
+                bumpMap: marsBumpMap,
+                bumpScale: 0.05
+            });
+            const mars = new THREE.Mesh(geometry, material);
+            scene.add(mars);
+
+            const ambientLight = new THREE.AmbientLight(0x404040);
+            scene.add(ambientLight);
+
+            const pointLight = new THREE.PointLight(0xffffff, 1, 100);
+            pointLight.position.set(10, 10, 10);
+            scene.add(pointLight);
+
+            camera.position.z = 10;
+
+            const animate = () => {
+                requestAnimationFrame(animate);
+                mars.rotation.y += 0.002;
+                renderer.render(scene, camera);
+            };
+            animate();
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        };
+
+        // Virtual Mars Base Tour
+        const initVirtualTour = () => {
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('virtual-tour-canvas') });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+
+            const controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            // Load Mars terrain
+            const terrainLoader = new THREE.TextureLoader();
+            const terrainTexture = terrainLoader.load('https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/OSIRIS_Mars_true_color.jpg/2560px-OSIRIS_Mars_true_color.jpg');
+            const terrainGeometry = new THREE.PlaneGeometry(100, 100, 50, 50);
+            const terrainMaterial = new THREE.MeshStandardMaterial({ map: terrainTexture, displacementMap: terrainTexture, displacementScale: 5 });
+            const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
+            terrain.rotation.x = -Math.PI / 2;
+            scene.add(terrain);
+
+            // Add Mars base structures
+            const baseGeometry = new THREE.BoxGeometry(10, 5, 10);
+            const baseMaterial = new THREE.MeshPhongMaterial({ color: 0xcccccc });
+            const base = new THREE.Mesh(baseGeometry, baseMaterial);
+            base.position.set(0, 2.5, 0);
+            scene.add(base);
+
+            // Add solar panels
+            const solarPanelGeometry = new THREE.BoxGeometry(5, 0.1, 3);
+            const solarPanelMaterial = new THREE.MeshPhongMaterial({ color: 0x1E90FF });
+            const solarPanel1 = new THREE.Mesh(solarPanelGeometry, solarPanelMaterial);
+            solarPanel1.position.set(-8, 1, 5);
+            scene.add(solarPanel1);
+            const solarPanel2 = solarPanel1.clone();
+            solarPanel2.position.set(8, 1, -5);
+            scene.add(solarPanel2);
+
+            // Add rover
+            const loader = new THREE.GLTFLoader();
+            loader.load('https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/RobotExpressive/glTF/RobotExpressive.gltf', (gltf) => {
+                const rover = gltf.scene;
+                rover.scale.set(0.5, 0.5, 0.5);
+                rover.position.set(5, 0, 5);
+                scene.add(rover);
+            });
+
+            // Add lighting
+            const ambientLight = new THREE.AmbientLight(0x404040);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+            directionalLight.position.set(5, 5, 5);
+            scene.add(directionalLight);
+
+            camera.position.set(0, 10, 30);
+
+            // Tour locations
+            const tourLocations = [
+                { name: "Welcome Center", position: new THREE.Vector3(0, 5, 20), description: "Start your journey at the Mars Base Welcome Center." },
+                { name: "Research Lab", position: new THREE.Vector3(-10, 5, 0), description: "Explore cutting-edge Mars research in our state-of-the-art laboratory." },
+                { name: "Greenhouse", position: new THREE.Vector3(10, 5, -10), description: "Discover how we grow food on Mars in our advanced greenhouse facility." },
+                { name: "Rover Bay", position: new THREE.Vector3(5, 2, 5), description: "Get up close with our Mars exploration rovers." },
+                { name: "Observatory", position: new THREE.Vector3(-5, 10, -15), description: "Gaze at the Martian night sky from our observatory dome." }
+            ];
+
+            let currentLocationIndex = 0;
+
+            const updateInfoPanel = (location) => {
+                document.getElementById('location-name').textContent = location.name;
+                document.getElementById('location-description').textContent = location.description;
+            };
+
+            const moveCameraToLocation = (location) => {
+                gsap.to(camera.position, {
+                    duration: 2,
+                    x: location.position.x,
+                    y: location.position.y,
+                    z: location.position.z,
+                    onUpdate: () => controls.update(),
+                    onComplete: () => updateInfoPanel(location)
+                });
+            };
+
+            document.getElementById('next-location').addEventListener('click', () => {
+                currentLocationIndex = (currentLocationIndex + 1) % tourLocations.length;
+                moveCameraToLocation(tourLocations[currentLocationIndex]);
+            });
+
+            document.getElementById('prev-location').addEventListener('click', () => {
+                currentLocationIndex = (currentLocationIndex - 1 + tourLocations.length) % tourLocations.length;
+                moveCameraToLocation(tourLocations[currentLocationIndex]);
+            });
+
+            // Audio
+            const bgMusic = new Howl({
+                src: ['path/to/mars-ambience.mp3'],
+                loop: true,
+                volume: 0.5
+            });
+
+            document.getElementById('toggle-audio').addEventListener('click', () => {
+                if (bgMusic.playing()) {
+                    bgMusic.pause();
+                    document.getElementById('toggle-audio').textContent = '🔇';
+                } else {
+                    bgMusic.play();
+                    document.getElementById('toggle-audio').textContent = '🔊';
+                }
+            });
+
+            const animate = () => {
+                requestAnimationFrame(animate);
+                controls.update();
+                renderer.render(scene, camera);
+            };
+            animate();
+
+            updateInfoPanel(tourLocations[currentLocationIndex]);
+            bgMusic.play();
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        };
+
+        // Mission Timeline
+        const initMissionTimeline = () => {
+            const timeline = [
+                { date: '2024-07-01', event: 'Mission Launch' },
+                { date: '2024-12-15', event: 'Mars Arrival' },
+                { date: '2025-02-01', event: 'Sample Collection Begins' },
+                { date: '2025-07-15', event: 'Return Launch' },
+                { date: '2026-03-01', event: 'Earth Return' }
+            ];
+
+            const timelineContainer = document.getElementById('mission-timeline');
+            const svg = d3.select(timelineContainer).append('svg')
+                .attr('width', '100%')
+                .attr('height', 200);
+
+            const margin = {top: 20, right: 20, bottom: 20, left: 20};
+            const width = timelineContainer.offsetWidth - margin.left - margin.right;
+            const height = 200 - margin.top - margin.bottom;
+
+            const x = d3.scaleTime()
+                .domain(d3.extent(timeline, d => new Date(d.date)))
+                .range([0, width]);
+
+            const g = svg.append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+
+            g.append('g')
+                .attr('transform', `translate(0,${height})`)
+                .call(d3.axisBottom(x));
+
+            g.selectAll('circle')
+                .data(timeline)
+                .enter().append('circle')
+                .attr('cx', d => x(new Date(d.date)))
+                .attr('cy', height / 2)
+                .attr('r', 8)
+                .attr('fill', '#4ECDC4');
+
+            g.selectAll('text')
+                .data(timeline)
+                .enter().append('text')
+                .attr('x', d => x(new Date(d.date)))
+                .attr('y', height / 2 - 20)
+                .attr('text-anchor', 'middle')
+                .text(d => d.event)
+                .attr('fill', '#F0F0F0');
+        };
+
+        // Resource Management
+        const initResourceManagement = () => {
+            const resources = [
+                { name: 'Oxygen', current: 80, max: 100, unit: 'tons' },
+                { name: 'Water', current: 60, max: 100, unit: 'kiloliters' },
+                { name: 'Food', current: 75, max: 100, unit: 'tons' },
+                { name: 'Fuel', current: 90, max: 100, unit: 'tons' }
+            ];
+
+            const resourceContainer = document.getElementById('resource-management');
+            resources.forEach(resource => {
+                const resourceElement = document.createElement('div');
+                resourceElement.classList.add('resource-item');
+                resourceElement.innerHTML = `
+                    <h3>${resource.name}</h3>
+                    <div class="resource-bar">
+                        <div class="resource-fill" style="width: ${(resource.current / resource.max) * 100}%"></div>
+                    </div>
+                    <p>${resource.current}/${resource.max} ${resource.unit}</p>
+                `;
+                resourceContainer.appendChild(resourceElement);
+            });
+        };
+
+        // Budget Chart
+        const initBudgetChart = () => {
+            const ctx = document.getElementById('budget-chart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    datasets: [{
+                        label: 'Actual Budget',
+                        data: [12, 19, 3, 5, 2, 3],
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1,
+                        fill: {
+                            target: 'origin',
+                            above: 'rgba(75, 192, 192, 0.2)',
+                        }
+                    },
+                    {
+                        label: 'Projected Budget',
+                        data: [10, 15, 7, 12, 9, 4],
+                        borderColor: 'rgb(255, 99, 132)',
+                        tension: 0.1,
+                        borderDash: [5, 5]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: '#F0F0F0'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: '#F0F0F0'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#F0F0F0'
+                            }
+                        }
+                    }
+                }
+            });
+        };
+
+        // Mission Progress
+        const initMissionProgress = () => {
+            const progressContainer = document.getElementById('mission-progress');
+            const progress = 65; // Example progress percentage
+            
+            progressContainer.innerHTML = `
+                <h3>Overall Progress</h3>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${progress}%"></div>
+                </div>
+                <p>${progress}% Complete</p>
+            `;
+        };
+
+        // Communication Log
+        const initCommunicationLog = () => {
+            const logContainer = document.getElementById('communication-log');
+            const messages = [
+                { time: '10:00', sender: 'Mission Control', message: 'Status update required.' },
+                { time: '10:05', sender: 'Mars Base', message: 'All systems nominal. Proceeding with sample collection.' },
+                { time: '10:15', sender: 'Mission Control', message: 'Acknowledged. Keep us informed of any anomalies.' },
+                { time: '10:30', sender: 'Mars Base', message: 'Sample A-113 collected. Analyzing composition.' }
+            ];
+
+            messages.forEach(msg => {
+                const logEntry = document.createElement('div');
+                logEntry.classList.add('log-entry');
+                logEntry.innerHTML = `<strong>${msg.time} - ${msg.sender}:</strong> ${msg.message}`;
+                logContainer.appendChild(logEntry);
+            });
+        };
+
+        // Task Manager
+        const initTaskManager = () => {
+            const taskList = document.getElementById('task-list');
+            const tasks = [
+                'Perform daily equipment check',
+                'Collect soil samples from Site B',
+                'Analyze atmospheric composition',
+                'Conduct radiation level assessment',
+                'Update mission log'
+            ];
+
+            tasks.forEach(task => {
+                const li = document.createElement('li');
+                li.textContent = task;
+                li.draggable = true;
+                taskList.appendChild(li);
+            });
+
+            new Sortable(taskList, {
+                animation: 150,
+                ghostClass: 'sortable-ghost'
+            });
+        };
+
+        // Risk Assessment
+        const initRiskAssessment = () => {
+            const riskMatrix = document.getElementById('risk-matrix');
+            const rows = 5;
+            const cols = 5;
+
+            for (let i = 0; i < rows * cols; i++) {
+                const riskPoint = document.createElement('div');
+                riskPoint.classList.add('risk-point');
+                riskPoint.style.opacity = Math.random();
+                riskMatrix.appendChild(riskPoint);
+
+                riskPoint.addEventListener('click', () => {
+                    const riskDetails = document.getElementById('risk-details');
+                    riskDetails.innerHTML = `
+                        <h4>Risk ${i + 1}</h4>
+                        <p>Probability: ${Math.floor(Math.random() * 100)}%</p>
+                        <p>Impact: ${['Low', 'Medium', 'High'][Math.floor(Math.random() * 3)]}</p>
+                    `;
+
+                    const riskMitigation = document.getElementById('risk-mitigation');
+                    riskMitigation.innerHTML = `
+                        <h4>Mitigation Strategy</h4>
+                        <p>1. Implement additional safety protocols</p>
+                        <p>2. Increase monitoring frequency</p>
+                        <p>3. Conduct additional training for crew members</p>
+                    `;
+                });
+            }
+        };
+
+        // Interactive Map
+        const initInteractiveMap = () => {
+            const mapPoints = document.querySelectorAll('.map-point');
+            const mapInfo = document.querySelector('.map-info');
+
+            mapPoints.forEach(point => {
+                point.addEventListener('click', () => {
+                    const info = point.getAttribute('data-info');
+                    mapInfo.textContent = info;
+                    mapInfo.style.display = 'block';
+                    mapInfo.style.left = `${point.offsetLeft}px`;
+                    mapInfo.style.top = `${point.offsetTop + 30}px`;
+                });
+            });
+        };
+
+        // Particle Background
+        const initParticleBackground = () => {
+            particlesJS('particles-js', {
+                particles: {
+                    number: { value: 100, density: { enable: true, value_area: 800 } },
+                    color: { value: '#ffffff' },
+                    shape: { type: 'circle' },
+                    opacity: { value: 0.5, random: true },
+                    size: { value: 3, random: true },
+                    move: { enable: true, speed: 1, direction: 'none', random: true, out_mode: 'out' }
+                },
+                interactivity: {
+                    detect_on: 'canvas',
+                    events: { onhover: { enable: true, mode: 'repulse' }, onclick: { enable: true, mode: 'push' } },
+                    modes: { repulse: { distance: 100, duration: 0.4 }, push: { particles_nb: 4 } }
+                }
+            });
+        };
+
+        // Initialize all components
+        document.addEventListener('DOMContentLoaded', () => {
+            initMarsModel();
+            initVirtualTour();
+            initMissionTimeline();
+            initResourceManagement();
+            initBudgetChart();
+            initMissionProgress();
+            initCommunicationLog();
+            initTaskManager();
+            initRiskAssessment();
+            initInteractiveMap();
+            initParticleBackground();
+        });
+    </script>
+</body>
+</html>
